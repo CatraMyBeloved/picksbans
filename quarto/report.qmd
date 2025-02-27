@@ -1,0 +1,40 @@
+---
+title: "Basic OWCS team composition analysis"
+author: "Noidea100/Catra"
+format: html
+---
+
+```{r setup, include=FALSE}
+# Set chunk options
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE, 
+  message = FALSE,
+  fig.width = 10, 
+  fig.height = 6
+)
+
+# Check if we need to update data
+update_data <- FALSE  # Set to FALSE to skip data update during development
+
+if(update_data) {
+  message("Running data preparation script...")
+  source("../R/data_preparation.R")
+} else {
+  message("Loading cached data...")
+  load("../data/esports_data.RData")
+}
+
+#Load libraries
+library(tidyverse)
+```
+
+## Introduction
+
+This document aims to analyse the hero selection by teams in the first three weeks of OWCS. The data is taken from the wonderful [sheet](https://docs.google.com/spreadsheets/d/e/2PACX-1vRTkWc3-NK0HtsOjipS8cqYMJRTddCSgecM-KD4wbNSpdjDJcpaYt-E-N8jU6j13CefwHGZ3I22SV-x/pubhtml) published by CommanderX. This report was written on the 27th of February, but should be able to always access the most recent data.
+
+## Methodology
+
+
+
+
