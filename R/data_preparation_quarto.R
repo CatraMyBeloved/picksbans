@@ -151,4 +151,6 @@ message("Tables created. Saving to file...")
 save(teams, maps, heroes, matches, match_maps, rounds, hero_composition, 
              file = "./data/esports_data.RData")
 
-message("Tables saved to file. Preparation completed!")
+message("Tables saved to file. Removing unused variables...")
+rm(data, cleaned_data, combined_data)
+message("Preparations completed!")

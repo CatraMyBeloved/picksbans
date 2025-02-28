@@ -1,10 +1,14 @@
 ---
 title: "Basic OWCS team composition analysis"
-author: "Noidea100/Catra"
+author: "noidea100/Catra"
 format: html
 ---
 
 ```{r setup, include=FALSE}
+#Load libraries
+library(tidyverse)
+library(DT)
+library(plotly)
 # Set chunk options
 knitr::opts_chunk$set(
   echo = TRUE,
@@ -25,16 +29,116 @@ if(update_data) {
   load("../data/esports_data.RData")
 }
 
-#Load libraries
-library(tidyverse)
+source("../R/2_analysis.R")
 ```
 
 ## Introduction
 
-This document aims to analyse the hero selection by teams in the first three weeks of OWCS. The data is taken from the wonderful [sheet](https://docs.google.com/spreadsheets/d/e/2PACX-1vRTkWc3-NK0HtsOjipS8cqYMJRTddCSgecM-KD4wbNSpdjDJcpaYt-E-N8jU6j13CefwHGZ3I22SV-x/pubhtml) published by CommanderX. This report was written on the 27th of February, but should be able to always access the most recent data.
+This report analyzes hero selection patterns in the Overwatch Champions Series (OWCS) based on data from the first three weeks of competition. The dataset contains detailed information on matches across three regions: Korea, EMEA (Europe, Middle East, and Africa), and North America, allowing us to identify meta trends and regional preferences in team compositions.
 
-## Methodology
+The data is sourced from a comprehensive spreadsheet maintained by CommanderX, which tracks hero selections, map results, and team performance. This analysis aims to provide insights into the current competitive meta, highlighting which heroes dominate across different game modes and maps, as well as examining how team compositions vary by region and specific match contexts.
+Our analysis focuses on several key dimensions:
+
+ - Overall hero pick rates by role
+ - Hero preferences across different game modes (Control, Flashpoint, Hybrid, Push, and Escort)
+ - Map-specific hero selections
+ - Team composition patterns
+
+By examining these patterns, we can better understand the current state of professional Overwatch play and identify both standard meta compositions and unique strategic adaptations being employed by top teams.
+
+This report will be updated periodically as new data becomes available. 
+
+## Hero pickrates
+
+This section will focus on hero pick rates and associated analysis. 
+
+```{r hero-pickrates-table}
+pickrates <- get_pickrates()
 
 
+datatable(
+  pickrates,
+  colnames = c("Hero", "Role", "Maps played", "Pickrate"),
+  filter = "top",
+  options = list(
+    searching = TRUE,
+    pageLength = 10,
+    autoWidth = TRUE
+  )
+) |> 
+  formatPercentage("pickrate", digits = 1)
+```
+
+We can see some heroes being extremely popular, being played on 80% of all maps, regardless of mode. Lets take a closer look at the top picks and compare them. First, we will at the most popular heroes, and their pickrates.
+
+```{r hero-pickrates-plots}
+visualize_pickrates(get_pickrates())
+```
+ 
+We can see some strong favorites, like Lucio. He is played on 80% of maps for atleast one point/round. Sojourn and Genji follow closely behind. 
+
+Furthermore, tanks seem to be less popular overall. This is most likely caused by there only being one tank as opposed to two DPS and supports. In order to still be able to compare tanks and their pickrates, lets divide our pickrates by role.
+
+```{r hero-pickrates-by-role-plots}
+visualize_pickrates_by_role(get_pickrates())
+```
+
+Hazard is the clear winner here, most likely a remnant of the very dominant Hazard meta in the first weeks. We will examine pickrates over time later in this report, which confirm our hunch. Dva, Wrecking Ball and Ramattra follow behind, with little differences between them. 
+
+## Hero versatility over modes
+
+Next, let us examine hero pickrates in different modes.
+
+```{r hero-pickrates-by-mode}
+pickrates_per_mode <- get_pickrates_per_mode()
+
+datatable(
+  pickrates_per_mode,
+  colnames = c("Hero", "Role", "Mode", "Maps played", "Pickrate"),
+  filter = "top",
+  options = list(
+    searching = TRUE,
+    pageLength = 10,
+    autoWidth = TRUE
+  )
+) |> 
+  formatPercentage("pickrate", digits = 1)
+```
+
+Again, Lucio has the highest pickrate, with 91% on Push maps. However, when filtering for him, we see that he is far less popular on Escort than on other modes. 
+
+```{r hero-pickrates-by-mode-plot}
+plot_data <- pickrates_per_mode |> filter(pickrate > 0.1)
+
+# Create a plotly figure directly
+fig <- plot_ly()
+
+# Get unique hero names and modes
+hero_names <- unique(plot_data$hero_name)
+modes <- unique(plot_data$mode)
+
+# Add a trace for each hero (all set to legendonly by default)
+for (i in seq_along(hero_names)) {
+  hero_data <- plot_data |> filter(hero_name == hero_names[i])
+  
+  fig <- fig |> add_trace(
+    type = "bar",
+    x = hero_data$mode,
+    y = hero_data$pickrate,
+    name = hero_names[i],
+    visible = "legendonly"
+  )
+}
+
+# Update layout
+fig <- fig |> layout(
+  barmode = "group",
+  xaxis = list(title = "mode"),
+  yaxis = list(title = "pickrate"),
+  legend = list(title = list(text = "Heroes"))
+)
+
+fig
+```
 
 
