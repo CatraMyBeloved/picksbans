@@ -1,7 +1,9 @@
 ---
 title: "Basic OWCS team composition analysis"
 author: "noidea100/Catra"
-format: html
+format:
+  html:
+    toc: true
 ---
 
 ```{r setup, include=FALSE}
@@ -107,7 +109,7 @@ datatable(
 
 Again, Lucio has the highest pickrate, with 91% on Push maps. However, when filtering for him, we see that he is far less popular on Escort than on other modes. 
 
-```{r hero-pickrates-by-mode-plot}
+```{r hero-pickrates-by-mode-plot, echo=FALSE}
 plot_data <- pickrates_per_mode |> filter(pickrate > 0.1)
 
 # Create a plotly figure directly
@@ -141,4 +143,40 @@ fig <- fig |> layout(
 fig
 ```
 
+## Team analysis
+
+For this section, we will focus on teams and their specific hero pickrates as well as determining specialist picks and teams. 
+
+```{r hero-pickrate-by-team}
+pickrates_by_team <- get_pickrates_by_team()
+
+datatable(pickrates_by_team,
+          colnames = c("Team Name", "Hero", "Role", "Total times played", "Pickrate"),
+          filter = "top",
+  options = list(
+    searching = TRUE,
+    pageLength = 10,
+    autoWidth = TRUE
+  )) |> 
+  formatPercentage("pickrate_by_team", digits= 1)
+
+```
+The top of our table is not surprising, inhabited by Lucio, Sojourn and the occasional Genji. The first anomaly is found with Team Liquid, who play more Ana than any other team.
+
+Lets look at the differences between the average pickrate, and teams pickrates.
+```{r pickrates-avg-vs-team}
+pickrate_comparison <- compare_teams_to_avg_pickrate()
+
+datatable(pickrate_comparison,
+          colnames = c("Team", "Hero", "Role", "Team pickrate", "Avg. pickrate", "Pickrate difference"),
+          filter = "top",
+          options = list(
+            searching = TRUE,
+            pageLength = 10,
+            autoWidth = TRUE
+          )
+          ) |> 
+  formatPercentage(c("pickrate", "pickrate_by_team", "pickrate_diff"), digits = 1)
+
+```
 
