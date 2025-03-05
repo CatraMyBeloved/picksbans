@@ -226,6 +226,20 @@ ui <- page_fluid(
                     choices = c("All" = "All", team_list)),
         selectInput("mapFilterBan", "Map(s)",
                     choices = c("All" = "All", map_list))
+      ),
+      card(
+        card_title("Banrates per hero"),
+        card_body(
+          dataTableOutput("banrates")
+        )
+      ),
+      card(
+        card_header("Ban Rates - Plot"),
+        card_body(
+          sliderInput("topnBanrates", "Top N heroes to show",
+                      min = 1, max = 20, value = 10),
+          plotOutput("banratesVis")
+        )
       )
     )
   )
@@ -602,17 +616,18 @@ server <- function(input, output) {
   
   filtered_ban_data <- reactive({
     filtered_data <- all_bans |> filter(
-      week %in% as.integer(input$weekFilterComp),
-      region %in% input$regionFilterComp
+      week %in% as.integer(input$weekFilterBan),
+      region %in% input$regionFilterBan
     )
     
     if(input$teamFilterBan != "All"){
-      filtered_data <- filtered_data |> filter(team_name == input$teamFilterComp)
+      filtered_data <- filtered_data |> filter(team_name == input$teamFilterBan)
     } 
     
     if(input$mapFilterBan != "All"){
-      filtered_data <- filtered_data |> filter(map_name == input$mapFilterComp)
+      filtered_data <- filtered_data |> filter(map_name == input$mapFilterBan)
     }
+    return(filtered_data)
   })
   
   # update available teams by region
@@ -635,19 +650,80 @@ server <- function(input, output) {
     )
   })
   
-  n_maps_played <- reactive({
-    all_bans |> n_distinct(map_match_id)
-  })
+  total_maps_ban <- reactive({
+    n_distinct(filtered_ban_data()$match_map_id)
+    })
   
   banrates <- reactive({
-    all_bans |> 
+    filtered_ban_data() |> 
       group_by(hero_name) |> 
       summarize(
-        first_ban = n(first_bool == TRUE),
-        second_ban = n(first_bool == FALSE)
-      )
+        first_ban = sum(first_bool == TRUE),
+        second_ban = sum(first_bool == FALSE),
+        total_ban = n(),
+        first_ban_rate = first_ban / total_maps_ban(),
+        second_ban_rate = second_ban / total_maps_ban(),
+        total_ban_rate = total_ban / total_maps_ban()
+      ) |> 
+      arrange(desc(total_ban))
   })
+  
+  #outputs ---------
+  
+  output$banrates <- renderDT(
+    banrates() |> 
+      datatable(
+        colnames = c("Hero", "N first bans", "N follow-up bans", "N total bans",
+                     "Rate first bans", "Rate second bans", "Total rate"),
+        options = list(
+          searching = TRUE, 
+          pageLength = 10,
+          autoWidth = TRUE
+        )
+      ) |> 
+      formatPercentage(c("first_ban_rate", "second_ban_rate", "total_ban_rate"), digits = 1)
+    
+  )
+  
+  output$banratesVis <- renderPlot({
+    # Prepare data in long format
+    ban_data_long <- banrates() |>
+      head(input$topnBanrates) |>
+      select(hero_name, first_ban_rate, second_ban_rate) |>
+      pivot_longer(
+        cols = c(first_ban_rate, second_ban_rate),
+        names_to = "ban_type",
+        values_to = "ban_rate"
+      ) |>
+      mutate(
+        ban_type = case_when(
+          ban_type == "first_ban_rate" ~ "First Ban",
+          ban_type == "second_ban_rate" ~ "Second Ban"
+        ),
+        hero_name = reorder(hero_name, ban_rate, sum),
+        ban_type = factor(ban_type, levels = c("Second Ban", "First Ban"))
+      )
+    
+    # Create the stacked bar chart
+    ggplot(ban_data_long, aes(x = hero_name, y = ban_rate, fill = ban_type)) +
+      geom_col() +
+      scale_fill_manual(
+        values = c("First Ban" = "#3A85C7", "Second Ban" = "#5AAAE0"),
+        name = "Ban Type"
+      )  +
+      labs(
+        x = NULL,
+        y = "Ban Rate",
+        title = "Hero Ban Rates"
+      ) +
+      coord_flip() +
+      theme_minimal() +
+      scale_y_continuous(labels = scales::percent) +
+      guides(fill = guide_legend(reverse = TRUE))
+  })
+  
 }
-
+  
+  
 # Run the application -----------
 shinyApp(ui = ui, server = server)
