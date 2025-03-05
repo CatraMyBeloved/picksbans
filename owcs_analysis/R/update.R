@@ -68,7 +68,8 @@ matches <- combined_data |>
   rename(team2_id = team_id) |> 
   select(match_id, team1_id, team2_id, everything(), -t1_team, -t2_team, -region.x, -region.y)
 
-match_maps <- combined_data |> select(date, t1_team, t2_team, map, t1_result, t2_result) |>
+match_maps <- combined_data |>
+  select(date, t1_team, t2_team, map, t1_result, t2_result) |>
   group_by(date, t1_team, t2_team, map) |> 
   mutate(map_winner= case_when(
     any(grepl("W", t1_result)) ~ t1_team,
@@ -145,6 +146,29 @@ hero_composition <- combined_data |> select(-vod_link, -patch_date, -bracket, -w
   left_join(heroes, c("hero_name")) |> 
   mutate(hero_comp_id = row_number()) |> 
   select(hero_comp_id, round_id, hero_id, team)
+
+bans <- combined_data |>
+  select(date, t1_team, t2_team, map, first_ban_team, first_ban_hero, second_ban_team, second_ban_hero) |> 
+  left_join(teams, by = c("t1_team" = "team_name")) |> 
+  rename(team1_id = team_id) |> 
+  left_join(teams, by = c("t2_team" = "team_name")) |> 
+  rename(team2_id = team_id) |> 
+  left_join(matches, by = c("team1_id", "team2_id", "date")) |> 
+  left_join(maps, by = c("map" = "map_name")) |> 
+  left_join(match_maps, by = c("match_id", "map_id")) |> 
+  distinct(match_map_id, first_ban_team, first_ban_hero,
+           second_ban_team, second_ban_team, second_ban_hero) |> 
+  pivot_longer(cols = c(first_ban_hero, second_ban_hero),
+               names_to = "first_second",
+               values_to = "hero") |> 
+  mutate(first_bool = (first_second == "first_ban_hero")) |> 
+  mutate(team = case_when(
+    first_bool ~ first_ban_team,
+    .default = second_ban_team
+  )) |> 
+  left_join(teams, by = c("team" = "team_name")) |> 
+  left_join(heroes, by = c("hero" = "hero_name")) |> 
+  select(match_map_id, team_id, first_bool, hero_id)
 
 message("Tables created. Saving to file...")
 
