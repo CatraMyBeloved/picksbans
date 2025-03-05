@@ -172,7 +172,7 @@ bans <- combined_data |>
 
 message("Tables created. Saving to file...")
 
-save(teams, maps, heroes, matches, match_maps, rounds, hero_composition, 
+save(teams, maps, heroes, matches, match_maps, rounds, hero_composition, bans, 
      file = "./data/esports_data.RData")
 
 message("Tables saved to file. Removing unused variables...")

@@ -20,6 +20,14 @@ all_data <- hero_composition |>
   left_join(teams, by = c("team" = "team_id")) |> 
   left_join(maps, by = "map_id") 
 
+all_bans <- bans |> 
+  left_join(heroes, by = "hero_id") |> 
+  left_join(match_maps, by = "match_map_id") |> 
+  left_join(matches, by = "match_id") |> 
+  left_join(teams, by = "team_id") |> 
+  left_join(maps, by = "map_id") 
+
+
 # Define UI for application 
 #Title and refresh button -----------
 ui <- page_fluid(
@@ -121,6 +129,7 @@ ui <- page_fluid(
       )
     ),
     
+    
 #Map panel ----------
     
     nav_panel(
@@ -198,6 +207,26 @@ ui <- page_fluid(
             
           )
         )
+    )
+  ),
+  nav_panel(
+    "Ban analysis",
+    layout_sidebar(
+      sidebar = sidebar(
+        helpText("Select criteria to filter composition data."),
+        checkboxGroupInput("weekFilterBan", "Week",
+                           choices = list("Week 1" = 1, "Week 2" = 2,
+                                          "Week 3" = 3, "Week 4" = 4),
+                           selected = list(1,2,3,4)),
+        
+        checkboxGroupInput("regionFilterBan", "Region",
+                           choices = list("NA" = "north_america", "EMEA" = "emea", "Korea" = "korea"),
+                           selected = list("north_america", "emea", "korea")),
+        selectInput("teamFilterBan", "Team",
+                    choices = c("All" = "All", team_list)),
+        selectInput("mapFilterBan", "Map(s)",
+                    choices = c("All" = "All", map_list))
+      )
     )
   )
 )
@@ -567,6 +596,57 @@ server <- function(input, output) {
               )) 
   )
   
+  #Ban page ---------
+  
+  #Filter logic----------
+  
+  filtered_ban_data <- reactive({
+    filtered_data <- all_bans |> filter(
+      week %in% as.integer(input$weekFilterComp),
+      region %in% input$regionFilterComp
+    )
+    
+    if(input$teamFilterBan != "All"){
+      filtered_data <- filtered_data |> filter(team_name == input$teamFilterComp)
+    } 
+    
+    if(input$mapFilterBan != "All"){
+      filtered_data <- filtered_data |> filter(map_name == input$mapFilterComp)
+    }
+  })
+  
+  # update available teams by region
+  
+  observeEvent(input$regionFilterBan, {
+    # Get filtered teams
+    teams_list <- teams_in_region()
+    
+    # Handle case when no teams match (provide a placeholder)
+    if(length(teams_list) == 0) {
+      teams_list <- list("No teams available" = "")
+    }
+    
+    # Update the select input
+    updateSelectInput(
+      inputId = "teamFilterBan",
+      choices = c("All" = "All",teams_list),
+      # Try to maintain current selection if it's still valid
+      selected = if(input$teamFilterBan %in% names(teams_list)) input$teamFilterBan else NULL
+    )
+  })
+  
+  n_maps_played <- reactive({
+    all_bans |> n_distinct(map_match_id)
+  })
+  
+  banrates <- reactive({
+    all_bans |> 
+      group_by(hero_name) |> 
+      summarize(
+        first_ban = n(first_bool == TRUE),
+        second_ban = n(first_bool == FALSE)
+      )
+  })
 }
 
 # Run the application -----------
