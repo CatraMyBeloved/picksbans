@@ -21,6 +21,7 @@ all_data <- hero_composition |>
   left_join(maps, by = "map_id") 
 
 # Define UI for application 
+#Title and refresh button -----------
 ui <- page_fluid(
   title = "OWCS TCAT",
   div(
@@ -33,10 +34,10 @@ ui <- page_fluid(
   titlePanel("OWCS Team Composition Analysis Tool"),
   
   #Panels
-  
+#Overview pannel ----------
   navset_card_tab(
     
-    #Overview pannel
+
     
     nav_panel(
       "Overview",
@@ -48,8 +49,8 @@ ui <- page_fluid(
                                             "Week 3" = 3, "Week 4" = 4),
                              selected = list(1,2,3,4)),
           checkboxGroupInput("regionFilterGen", "Region",
-                             choices = list("NA"= "na", "EMEA" = "emea", "Korea" = "kr"),
-                             selected = list("na", "emea", "kr")),
+                             choices = list("NA"= "north_america", "EMEA" = "emea", "Korea" = "korea"),
+                             selected = list("north_america", "emea", "korea")),
           checkboxGroupInput("modeFilterGen", "Modes",
                              choices = list("Control", "Flashpoint", "Push",
                                             "Escort", "Hybrid"),
@@ -76,7 +77,7 @@ ui <- page_fluid(
       )
     ),
     
-    # Team panel
+#Team panel ----------
     
     nav_panel(
       "Team Analysis",
@@ -88,8 +89,8 @@ ui <- page_fluid(
                                             "Week 3" = 3, "Week 4" = 4),
                              selected = list(1,2,3,4)),
           checkboxGroupInput("regionFilterTeam", "Region",
-                             choices = list("NA" = "na", "EMEA" = "emea", "Korea" = "kr"),
-                             selected = list("na", "emea", "kr")),
+                             choices = list("NA" = "north_america", "EMEA" = "emea", "Korea" = "korea"),
+                             selected = list("north_america", "emea", "korea")),
           selectInput("teamFilterTeam", "Team",
                       choices = team_list),
           checkboxGroupInput("modeFilterTeam", "Modes",
@@ -120,7 +121,7 @@ ui <- page_fluid(
       )
     ),
     
-    #Map panel
+#Map panel ----------
     
     nav_panel(
       "Map Analysis",
@@ -132,10 +133,12 @@ ui <- page_fluid(
                                             "Week 3" = 3, "Week 4" = 4),
                              selected = list(1,2,3,4)),
           checkboxGroupInput("regionFilterMaps", "Region",
-                             choices = list("NA" = "na", "EMEA" = "emea", "Korea" = "kr"),
-                             selected = list("na", "emea", "kr")),
+                             choices = list("NA" = "north_america", "EMEA" = "emea", "Korea" = "korea"),
+                             selected = list("north_america", "emea", "korea")),
           selectInput("mapFilterMaps", "Maps",
                              choices = map_list),
+          selectInput("teamFilterMaps", "Team",
+                      choices = c("All" = "All", team_list)),
           checkboxGroupInput("roleFilterMaps", "Roles",
                              choices = list("Tank" = "tank", "Support" = "sup", "DPS" = "dps"),
                              selected = list("tank", "sup", "dps"))
@@ -158,7 +161,8 @@ ui <- page_fluid(
         )
       )
     ),
-    
+
+#Composition panel ----------
     nav_panel(
       "Composition Analysis",
       layout_sidebar(
@@ -170,10 +174,13 @@ ui <- page_fluid(
                              selected = list(1,2,3,4)),
           
           checkboxGroupInput("regionFilterComp", "Region",
-                             choices = list("NA" = "na", "EMEA" = "emea", "Korea" = "kr"),
-                             selected = list("na", "emea", "kr")),
-          
-          selectInput("modeFilterComp", "Mode",
+                             choices = list("NA" = "north_america", "EMEA" = "emea", "Korea" = "korea"),
+                             selected = list("north_america", "emea", "korea")),
+          selectInput("teamFilterComp", "Team",
+                      choices = c("All" = "All", team_list)),
+          selectInput("mapFilterComp", "Map(s)",
+                      choices = c("All" = "All", map_list)),
+          checkboxGroupInput("modeFilterComp", "Mode",
                       choices = list("Control", "Flashpoint", "Push",
                                      "Escort", "Hybrid"),
                       selected = list("Control", "Flashpoint", "Push",
@@ -198,8 +205,10 @@ ui <- page_fluid(
   
   
   
-# Define server logic 
+# Define server logic ----------
 server <- function(input, output) {
+  
+#Refresh data section ----------
   observeEvent(input$updateDataBtn, {
     # Show a modal dialog to indicate data is being updated
     showModal(modalDialog(
@@ -233,16 +242,20 @@ server <- function(input, output) {
     })
   })
   
-  # Overview page
+# Overview page----------
+  
+  #Filter logic ----------
   filtered_data_general <- reactive({
     all_data |> 
       filter(week %in% as.integer(input$weekFilterGen),
              mode %in% input$modeFilterGen,
-             role %in% input$roleFilterGen) |> 
+             role %in% input$roleFilterGen,
+             region %in% input$regionFilterGen) |> 
       select(round_id, match_map_id, match_id, hero_name,
              role, map_name, mode, team_name) 
   })
   
+  #Calculations ----------
   total_maps_general <- reactive({
     n_distinct(filtered_data_general()$match_map_id)
   })
@@ -258,6 +271,7 @@ server <- function(input, output) {
       arrange(desc(pickrate)) 
   })
   
+  # Outputs -----------
   output$generalPickrates <- renderDT({general_pickrate() |> 
       select(hero_name, appearances, pickrate) |> 
       datatable(
@@ -281,15 +295,16 @@ server <- function(input, output) {
       coord_flip() 
   })
   
-  # Team page
-  # Calculate filtered data for each team
-  filtered_data_by_team_filters <- reactive({
+  # Team page ---------
+  # Filter logic ----------
+    filtered_data_by_team_filters <- reactive({
     all_data |>
       filter(week %in% as.integer(input$weekFilterTeam),
              mode %in% input$modeFilterTeam,
-             role %in% input$roleFilterTeam)
+             role %in% input$roleFilterTeam,
+             region %in% input$regionFilterTeam)
   })
-  
+  # Calculations ----------
   maps_by_team <- reactive({
     filtered_data_by_team_filters() |>
       group_by(team_name) |>
@@ -336,6 +351,7 @@ server <- function(input, output) {
       arrange(desc(abs(pickrate_diff)))
   })
   
+  # Outputs ----------
   output$teamPickrates <- renderDT({
     pickrate_comparison_team() |>
       select(-role) |>
@@ -367,11 +383,55 @@ server <- function(input, output) {
       coord_flip()
   })
   
-  #Map page
+  # Map page ----------
+  
+  # Filter logic ----------
   filtered_data_by_maps <- reactive({
-    all_data |> 
+    filtered_data <- all_data |> 
       filter(week %in% as.integer(input$weekFilterMaps),
-             role %in% input$roleFilterMaps)
+             role %in% input$roleFilterMaps,
+             region %in% input$regionFilterMaps)
+    
+    if(input$teamFilterMaps != "All"){
+      filtered_data <- filtered_data |> filter(team_name == input$teamFilterMaps)
+    } 
+    
+  
+    
+    return(filtered_data)
+  })
+  
+  # Calculations -----------
+  
+  teams_in_region <- reactive({
+    # Get region filter from input
+    selected_regions <- input$regionFilterTeam
+    
+    # Filter teams based on selected regions
+    filtered_teams <- teams %>%
+      filter(region %in% selected_regions) %>%
+      pull(team_name)
+    
+    # Return as a named list for selectInput
+    setNames(as.list(filtered_teams), filtered_teams)
+  })
+  
+  observeEvent(input$regionFilterTeam, {
+    # Get filtered teams
+    teams_list <- teams_in_region()
+    
+    # Handle case when no teams match (provide a placeholder)
+    if(length(teams_list) == 0) {
+      teams_list <- list("No teams available" = "")
+    }
+    
+    # Update the select input
+    updateSelectInput(
+      inputId = "teamFilterTeam",
+      choices = teams_list,
+      # Try to maintain current selection if it's still valid
+      selected = if(input$teamFilterTeam %in% names(teams_list)) input$teamFilterTeam else NULL
+    )
   })
   
   total_n_maps <- reactive({
@@ -395,6 +455,8 @@ server <- function(input, output) {
       select(hero_name, map_name, role, appearances, pickrate) |> 
       arrange(desc(pickrate))
   })
+  
+  # Outputs -----------
   
   output$mapPickrates <- renderDT({
     map_pickrates() |> 
@@ -423,20 +485,66 @@ server <- function(input, output) {
       coord_flip() 
   })
   
-  #Composition page
+
+  # Composition page ----------
+  
+  #Filter logic ----------
   
   filtered_data_composition <- reactive({
-    all_data |> 
+    filtered_data <- all_data |> 
       filter(week %in% as.integer(input$weekFilterComp),
-             mode %in% input$modeFilterComp) |> 
-      mutate(unique_round_id = paste(match_map_id, round_id, name, sep = "_")) |>
+             mode %in% input$modeFilterComp,
+             region %in% input$regionFilterComp) |> 
       select(round_id, match_map_id, match_id, hero_name,
-             role, map_name, mode, team_name, unique_round_id) 
+             role, map_name, mode, team_name) 
+    
+    if(input$teamFilterComp != "All"){
+      filtered_data <- filtered_data |> filter(team_name == input$teamFilterComp)
+    } 
+      
+    if(input$mapFilterComp != "All"){
+      filtered_data <- filtered_data |> filter(map_name == input$mapFilterComp)
+    }
+    
+    return(filtered_data)
+  })
+  
+  #Calculations ----------
+  
+  teams_in_region <- reactive({
+    # Get region filter from input
+    selected_regions <- input$regionFilterComp
+    
+    # Filter teams based on selected regions
+    filtered_teams <- teams %>%
+      filter(region %in% selected_regions) %>%
+      pull(team_name)
+    
+    # Return as a named list for selectInput
+    setNames(as.list(filtered_teams), filtered_teams)
+  })
+  
+  observeEvent(input$regionFilterComp, {
+    # Get filtered teams
+    teams_list <- teams_in_region()
+    
+    # Handle case when no teams match (provide a placeholder)
+    if(length(teams_list) == 0) {
+      teams_list <- list("No teams available" = "")
+    }
+    
+    # Update the select input
+    updateSelectInput(
+      inputId = "teamFilterComp",
+      choices = c("All" = "All",teams_list),
+      # Try to maintain current selection if it's still valid
+      selected = if(input$teamFilterComp %in% names(teams_list)) input$teamFilterComp else NULL
+    )
   })
   
   compositions <- reactive({
     filtered_data_composition() |> 
-      group_by(match_map_id, unique_round_id, team_name) |> 
+      group_by(match_map_id, round_id, team_name) |> 
       reframe(
         tank = hero_name[role == "tank"],
         dps = paste(head(sort(unique(hero_name[role == "dps"])), 2), collapse = ", "),
@@ -461,5 +569,5 @@ server <- function(input, output) {
   
 }
 
-# Run the application 
+# Run the application -----------
 shinyApp(ui = ui, server = server)
