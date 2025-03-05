@@ -157,8 +157,43 @@ ui <- page_fluid(
           )
         )
       )
+    ),
+    
+    nav_panel(
+      "Composition Analysis",
+      layout_sidebar(
+        sidebar = sidebar(
+          helpText("Select criteria to filter composition data."),
+          checkboxGroupInput("weekFilterComp", "Week",
+                             choices = list("Week 1" = 1, "Week 2" = 2,
+                                            "Week 3" = 3, "Week 4" = 4),
+                             selected = list(1,2,3,4)),
+          
+          checkboxGroupInput("regionFilterComp", "Region",
+                             choices = list("NA" = "na", "EMEA" = "emea", "Korea" = "kr"),
+                             selected = list("na", "emea", "kr")),
+          
+          selectInput("modeFilterComp", "Mode",
+                      choices = list("Control", "Flashpoint", "Push",
+                                     "Escort", "Hybrid"),
+                      selected = list("Control", "Flashpoint", "Push",
+                                      "Escort", "Hybrid"))
+          ),
+        card(
+          card_header(
+            "Composition counts"
+          ),
+          card_body(
+            checkboxGroupInput("roleSelectionComp", "Roles",
+                               choices = list("Tank" = "tank", "DPS" = "dps", "Support" = "sup"),
+                               inline = TRUE),
+            dataTableOutput("compositions")
+            
+          )
+        )
     )
   )
+)
 )
   
   
@@ -387,6 +422,42 @@ server <- function(input, output) {
       labs(x = "Hero", y = "Pickrate (%)") + 
       coord_flip() 
   })
+  
+  #Composition page
+  
+  filtered_data_composition <- reactive({
+    all_data |> 
+      filter(week %in% as.integer(input$weekFilterComp),
+             mode %in% input$modeFilterComp) |> 
+      select(round_id, match_map_id, match_id, hero_name,
+             role, map_name, mode, team_name) 
+  })
+  
+  compositions <- reactive({
+    filtered_data_composition() |> 
+      group_by(match_map_id, round_id, team_name) |> 
+      reframe(
+        tank = hero_name[role == "tank"],
+        dps = paste(sort(unique(hero_name[role == "dps"])), collapse = ", "),
+        sup = paste(sort(unique(hero_name[role == "sup"])), collapse = ", ")
+      )
+  })
+  
+  composition_counts <- reactive({
+    compositions() |> 
+      count(!!!syms(input$roleSelectionComp), name = "n_played") 
+  })
+  
+  output$compositions <- renderDT(
+    datatable(composition_counts(),
+              colnames = c(input$roleSelectionComp, "played"),
+              options = list(
+                searching = TRUE, 
+                pageLength = 10,
+                autoWidth = TRUE
+              )) 
+  )
+  
 }
 
 # Run the application 
