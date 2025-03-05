@@ -11,6 +11,7 @@ format:
 library(tidyverse)
 library(DT)
 library(plotly)
+library(shiny)
 # Set chunk options
 knitr::opts_chunk$set(
   echo = TRUE,
@@ -30,6 +31,7 @@ if(update_data) {
   message("Loading cached data...")
   load("../data/esports_data.RData")
 }
+
 
 source("../R/2_analysis.R")
 ```

@@ -101,7 +101,7 @@ get_pickrates_by_team <- function(min_appearances = 2){
   return(pickrates_per_team)
 }
 
-compare_teams_to_avg_pickrate <- function(team_name){
+compare_teams_to_avg_pickrate <- function(){
   pickrates_teams <- get_pickrates_by_team()
   pickrates_avg <- get_pickrates()
   result <- data.frame()
