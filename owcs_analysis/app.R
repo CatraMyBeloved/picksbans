@@ -429,17 +429,18 @@ server <- function(input, output) {
     all_data |> 
       filter(week %in% as.integer(input$weekFilterComp),
              mode %in% input$modeFilterComp) |> 
+      mutate(unique_round_id = paste(match_map_id, round_id, name, sep = "_")) |>
       select(round_id, match_map_id, match_id, hero_name,
-             role, map_name, mode, team_name) 
+             role, map_name, mode, team_name, unique_round_id) 
   })
   
   compositions <- reactive({
     filtered_data_composition() |> 
-      group_by(match_map_id, round_id, team_name) |> 
+      group_by(match_map_id, unique_round_id, team_name) |> 
       reframe(
         tank = hero_name[role == "tank"],
-        dps = paste(sort(unique(hero_name[role == "dps"])), collapse = ", "),
-        sup = paste(sort(unique(hero_name[role == "sup"])), collapse = ", ")
+        dps = paste(head(sort(unique(hero_name[role == "dps"])), 2), collapse = ", "),
+        sup = paste(head(sort(unique(hero_name[role == "sup"])), 2), collapse = ", ")
       )
   })
   
@@ -449,8 +450,8 @@ server <- function(input, output) {
   })
   
   output$compositions <- renderDT(
-    datatable(composition_counts(),
-              colnames = c(input$roleSelectionComp, "played"),
+    datatable(composition_counts() |> arrange(desc(n_played)),
+              colnames = c(input$roleSelectionComp, "Rounds played"),
               options = list(
                 searching = TRUE, 
                 pageLength = 10,
