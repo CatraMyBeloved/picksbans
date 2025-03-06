@@ -54,8 +54,9 @@ ui <- page_fluid(
           helpText("Select criteria to filter composition data."),
           checkboxGroupInput("weekFilterGen", "Week",
                              choices = list("Week 1" = 1, "Week 2" = 2,
-                                            "Week 3" = 3, "Week 4" = 4),
-                             selected = list(1,2,3,4)),
+                                            "Week 3" = 3, "Week 4" = 4,
+                                            "Playoffs"),
+                             selected = list(1,2,3,4,"Playoffs")),
           checkboxGroupInput("regionFilterGen", "Region",
                              choices = list("NA"= "north_america", "EMEA" = "emea", "Korea" = "korea"),
                              selected = list("north_america", "emea", "korea")),
@@ -94,8 +95,9 @@ ui <- page_fluid(
           helpText("Select criteria to filter composition data."),
           checkboxGroupInput("weekFilterTeam", "Week",
                              choices = list("Week 1" = 1, "Week 2" = 2,
-                                            "Week 3" = 3, "Week 4" = 4),
-                             selected = list(1,2,3,4)),
+                                            "Week 3" = 3, "Week 4" = 4,
+                                            "Playoffs"),
+                             selected = list(1,2,3,4,"Playoffs")),
           checkboxGroupInput("regionFilterTeam", "Region",
                              choices = list("NA" = "north_america", "EMEA" = "emea", "Korea" = "korea"),
                              selected = list("north_america", "emea", "korea")),
@@ -139,8 +141,9 @@ ui <- page_fluid(
           helpText("Select criteria to filter composition data."),
           checkboxGroupInput("weekFilterMaps", "Week",
                              choices = list("Week 1" = 1, "Week 2" = 2,
-                                            "Week 3" = 3, "Week 4" = 4),
-                             selected = list(1,2,3,4)),
+                                            "Week 3" = 3, "Week 4" = 4,
+                                            "Playoffs"),
+                             selected = list(1,2,3,4,"Playoffs")),
           checkboxGroupInput("regionFilterMaps", "Region",
                              choices = list("NA" = "north_america", "EMEA" = "emea", "Korea" = "korea"),
                              selected = list("north_america", "emea", "korea")),
@@ -179,8 +182,9 @@ ui <- page_fluid(
           helpText("Select criteria to filter composition data."),
           checkboxGroupInput("weekFilterComp", "Week",
                              choices = list("Week 1" = 1, "Week 2" = 2,
-                                            "Week 3" = 3, "Week 4" = 4),
-                             selected = list(1,2,3,4)),
+                                            "Week 3" = 3, "Week 4" = 4,
+                                            "Playoffs"),
+                             selected = list(1,2,3,4,"Playoffs")),
           
           checkboxGroupInput("regionFilterComp", "Region",
                              choices = list("NA" = "north_america", "EMEA" = "emea", "Korea" = "korea"),
@@ -216,8 +220,9 @@ ui <- page_fluid(
         helpText("Select criteria to filter composition data."),
         checkboxGroupInput("weekFilterBan", "Week",
                            choices = list("Week 1" = 1, "Week 2" = 2,
-                                          "Week 3" = 3, "Week 4" = 4),
-                           selected = list(1,2,3,4)),
+                                          "Week 3" = 3, "Week 4" = 4,
+                                          "Playoffs"),
+                           selected = list(1,2,3,4,"Playoffs")),
         
         checkboxGroupInput("regionFilterBan", "Region",
                            choices = list("NA" = "north_america", "EMEA" = "emea", "Korea" = "korea"),
@@ -290,7 +295,7 @@ server <- function(input, output) {
   #Filter logic ----------
   filtered_data_general <- reactive({
     all_data |> 
-      filter(week %in% as.integer(input$weekFilterGen),
+      filter(week %in% input$weekFilterGen,
              mode %in% input$modeFilterGen,
              role %in% input$roleFilterGen,
              region %in% input$regionFilterGen) |> 
@@ -342,7 +347,7 @@ server <- function(input, output) {
   # Filter logic ----------
     filtered_data_by_team_filters <- reactive({
     all_data |>
-      filter(week %in% as.integer(input$weekFilterTeam),
+      filter(week %in% input$weekFilterTeam,
              mode %in% input$modeFilterTeam,
              role %in% input$roleFilterTeam,
              region %in% input$regionFilterTeam)
@@ -431,7 +436,7 @@ server <- function(input, output) {
   # Filter logic ----------
   filtered_data_by_maps <- reactive({
     filtered_data <- all_data |> 
-      filter(week %in% as.integer(input$weekFilterMaps),
+      filter(week %in% input$weekFilterMaps,
              role %in% input$roleFilterMaps,
              region %in% input$regionFilterMaps)
     
@@ -535,7 +540,7 @@ server <- function(input, output) {
   
   filtered_data_composition <- reactive({
     filtered_data <- all_data |> 
-      filter(week %in% as.integer(input$weekFilterComp),
+      filter(week %in% input$weekFilterComp,
              mode %in% input$modeFilterComp,
              region %in% input$regionFilterComp) |> 
       select(round_id, match_map_id, match_id, hero_name,
@@ -616,7 +621,7 @@ server <- function(input, output) {
   
   filtered_ban_data <- reactive({
     filtered_data <- all_bans |> filter(
-      week %in% as.integer(input$weekFilterBan),
+      week %in% input$weekFilterBan,
       region %in% input$regionFilterBan
     )
     
