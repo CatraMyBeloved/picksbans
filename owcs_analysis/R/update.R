@@ -66,6 +66,13 @@ matches <- combined_data |>
   rename(team1_id = team_id) |> 
   left_join(teams, by = c("t2_team" = "team_name")) |> 
   rename(team2_id = team_id) |> 
+  mutate(week = case_when(
+    week %in% c("Uper Bracket Final", "Round Robin", "LBF",
+                "Quaterfinals", "Semifinals", "Grand Finals", "Upper Semifinals",
+                "Lower Quarter Finals", "Upper Quarterfinals", "Lower Semifinals",
+                "Uper Bracket Finals", "Lower Quarterfinals") ~ "Playoffs",
+    .default = week
+  )) |> 
   select(match_id, team1_id, team2_id, everything(), -t1_team, -t2_team, -region.x, -region.y)
 
 match_maps <- combined_data |>
