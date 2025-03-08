@@ -18,7 +18,9 @@ all_data <- hero_composition |>
   left_join(match_maps, by = "match_map_id") |> 
   left_join(matches, by = "match_id") |> 
   left_join(teams, by = c("team" = "team_id")) |> 
-  left_join(maps, by = "map_id") 
+  left_join(maps, by = "map_id") |> 
+  mutate(iswin = case_when(team == map_win_team_id ~ 1,
+                           .default = 0))
 
 all_bans <- bans |> 
   left_join(heroes, by = "hero_id") |> 
@@ -300,7 +302,7 @@ server <- function(input, output) {
              role %in% input$roleFilterGen,
              region %in% input$regionFilterGen) |> 
       select(round_id, match_map_id, match_id, hero_name,
-             role, map_name, mode, team_name) 
+             role, map_name, mode, team_name, team, iswin) 
   })
   
   #Calculations ----------
@@ -309,11 +311,12 @@ server <- function(input, output) {
   })
   
   general_pickrate <- reactive({filtered_data_general() |> 
-      distinct(hero_name, match_map_id, role) |> 
+      distinct(hero_name, match_map_id, role, .keep_all = TRUE) |> 
       group_by(hero_name, role) |> 
       summarise(
         appearances = n(),
-        pickrate = appearances/total_maps_general()
+        pickrate = appearances/total_maps_general(),
+        winrate = mean(iswin)
       ) |>
       filter(appearances > 0) |> 
       arrange(desc(pickrate)) 
@@ -321,16 +324,16 @@ server <- function(input, output) {
   
   # Outputs -----------
   output$generalPickrates <- renderDT({general_pickrate() |> 
-      select(hero_name, appearances, pickrate) |> 
+      select(hero_name, appearances, pickrate, winrate) |> 
       datatable(
-        colnames = c("Hero", "Maps played", "Pickrate"),
+        colnames = c("Hero", "Maps played", "Pickrate", "Winrate"),
         filter = "top",
         options = list(
           searching = TRUE, 
           pageLength = 10,
           autoWidth = TRUE
           )) |> 
-      formatPercentage("pickrate", digits = 1)
+      formatPercentage(c("pickrate", "winrate"), digits = 1)
   })
   
   output$generalPickratesVis <- renderPlot({
@@ -342,6 +345,8 @@ server <- function(input, output) {
       labs(x = "Hero", y = "Pickrate (%)") + 
       coord_flip() 
   })
+  
+  
   
   # Team page ---------
   # Filter logic ----------
@@ -362,7 +367,9 @@ server <- function(input, output) {
   hero_usage_by_team <- reactive({
     filtered_data_by_team_filters() |>
       group_by(team_name, hero_name, role) |>
-      summarise(maps_with_hero = n_distinct(match_map_id),
+      distinct(match_map_id, .keep_all = TRUE) |> 
+      summarise(maps_with_hero = n(),
+                wins_with_hero = sum(iswin),
                 .groups = "drop")
   })
   
@@ -370,7 +377,8 @@ server <- function(input, output) {
   team_pickrates <- reactive({
     hero_usage_by_team() |>
       left_join(maps_by_team(), by = "team_name") |>
-      mutate(team_pickrate = maps_with_hero / total_maps)
+      mutate(team_pickrate = maps_with_hero / total_maps,
+             team_winrate = wins_with_hero / maps_with_hero)
   })
   
   # Calculate weighted average pickrate across teams
@@ -394,8 +402,10 @@ server <- function(input, output) {
     # Join with average pickrates
     selected_team_pickrates |>
       left_join(average_team_pickrates(), by = c("hero_name", "role")) |>
-      mutate(pickrate_diff = team_pickrate - avg_pickrate) |>
-      select(hero_name, role, maps_with_hero, team_pickrate, avg_pickrate, pickrate_diff) |>
+      left_join(general_pickrate(), by = c("hero_name", "role")) |> 
+      mutate(pickrate_diff = team_pickrate - avg_pickrate,
+             winrate_diff = team_winrate - winrate) |>
+      select(hero_name, role, maps_with_hero, team_pickrate, avg_pickrate, pickrate_diff, team_winrate, winrate_diff) |>
       arrange(desc(abs(pickrate_diff)))
   })
   
@@ -406,7 +416,7 @@ server <- function(input, output) {
       datatable(
         colnames = c("Hero", "Maps played",
                      "Team pickrate", "Avg pickrate",
-                     "Pickrate difference"),
+                     "Pickrate difference", "Team winrate", "Winrate diff"),
         filter = "top",
         options = list(
           searching = TRUE, 
@@ -415,7 +425,11 @@ server <- function(input, output) {
         )) |>
       formatPercentage("team_pickrate", digits = 1) |>
       formatPercentage("avg_pickrate", digits = 1) |>
-      formatPercentage("pickrate_diff", digits = 1)
+      formatPercentage("pickrate_diff", digits = 1) |> 
+      formatPercentage("team_winrate", digits = 1) |> 
+      formatPercentage("winrate_diff", digits = 1)
+    
+    
   })
   
   output$teamPickratesVis <- renderPlot({
@@ -475,10 +489,10 @@ server <- function(input, output) {
     
     # Update the select input
     updateSelectInput(
-      inputId = "teamFilterTeam",
-      choices = teams_list,
+      inputId = "teamFilterMaps",
+      choices = c("All" = "All", teams_list),
       # Try to maintain current selection if it's still valid
-      selected = if(input$teamFilterTeam %in% names(teams_list)) input$teamFilterTeam else NULL
+      selected = if(input$teamFilterMaps %in% names(teams_list)) input$teamFilterMaps else NULL
     )
   })
   
@@ -492,15 +506,17 @@ server <- function(input, output) {
   
   map_pickrates <- reactive({
     filtered_data_by_maps() |> 
-    distinct(map_name, hero_name, role, match_map_id) |> 
+    distinct(map_name, hero_name, role, match_map_id, .keep_all = TRUE) |> 
     group_by(map_name, hero_name, role) |> 
       summarise(
-        appearances = n()
+        appearances = n(),
+        won_maps = sum(iswin)
       ) |> 
       left_join(total_n_maps(), by = "map_name") |> 
-      mutate(pickrate = appearances/n_played) |> 
+      mutate(pickrate = appearances/n_played,
+             winrate = won_maps/appearances) |> 
       ungroup() |> 
-      select(hero_name, map_name, role, appearances, pickrate) |> 
+      select(hero_name, map_name, role, appearances, pickrate, winrate) |> 
       arrange(desc(pickrate))
   })
   
@@ -637,6 +653,18 @@ server <- function(input, output) {
   
   # update available teams by region
   
+  teams_in_region <- reactive({
+    # Get region filter from input
+    selected_regions <- input$regionFilterBan
+    
+    # Filter teams based on selected regions
+    filtered_teams <- teams %>%
+      filter(region %in% selected_regions) %>%
+      pull(team_name)
+    
+    # Return as a named list for selectInput
+    setNames(as.list(filtered_teams), filtered_teams)
+  })
   observeEvent(input$regionFilterBan, {
     # Get filtered teams
     teams_list <- teams_in_region()
@@ -660,7 +688,7 @@ server <- function(input, output) {
     })
   
   banrates <- reactive({
-    filtered_ban_data() |> 
+    filtered_ban_data() |>
       group_by(hero_name) |> 
       summarize(
         first_ban = sum(first_bool == TRUE),
