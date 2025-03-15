@@ -6,7 +6,8 @@
 #
 # https://shiny.posit.co/
 # 
-
+# TODO: Update filtered matches to reflect modes
+# TODO: add filtered matches to composition and ban pages
 library(shiny)
 library(bslib)
 library(tidyverse)
@@ -53,15 +54,14 @@ ui <- page_fluid(
       "Overview",
       layout_sidebar(
         sidebar = sidebar(
-          helpText("Select criteria to filter composition data."),
+          checkboxGroupInput("regionFilterGen", "Region",
+                             choices = list("NA"= "north_america", "EMEA" = "emea", "Korea" = "korea"),
+                             selected = list("north_america", "emea", "korea")),
           checkboxGroupInput("weekFilterGen", "Week",
                              choices = list("Week 1" = 1, "Week 2" = 2,
                                             "Week 3" = 3, "Week 4" = 4,
                                             "Playoffs"),
                              selected = list(1,2,3,4,"Playoffs")),
-          checkboxGroupInput("regionFilterGen", "Region",
-                             choices = list("NA"= "north_america", "EMEA" = "emea", "Korea" = "korea"),
-                             selected = list("north_america", "emea", "korea")),
           checkboxGroupInput("modeFilterGen", "Modes",
                              choices = list("Control", "Flashpoint", "Push",
                                             "Escort", "Hybrid"),
@@ -84,6 +84,12 @@ ui <- page_fluid(
                         min = 1, max = 20, value = 10),
             plotOutput("generalPickratesVis")
           )
+        ),
+        card(
+          card_header("Filtered Matches"),
+          card_body(
+            dataTableOutput("filteredMatchesGen")
+          )
         )
       )
     ),
@@ -94,17 +100,16 @@ ui <- page_fluid(
       "Team Analysis",
       layout_sidebar(
         sidebar = sidebar(
-          helpText("Select criteria to filter composition data."),
-          checkboxGroupInput("weekFilterTeam", "Week",
-                             choices = list("Week 1" = 1, "Week 2" = 2,
-                                            "Week 3" = 3, "Week 4" = 4,
-                                            "Playoffs"),
-                             selected = list(1,2,3,4,"Playoffs")),
           checkboxGroupInput("regionFilterTeam", "Region",
                              choices = list("NA" = "north_america", "EMEA" = "emea", "Korea" = "korea"),
                              selected = list("north_america", "emea", "korea")),
           selectInput("teamFilterTeam", "Team",
                       choices = team_list),
+          checkboxGroupInput("weekFilterTeam", "Week",
+                             choices = list("Week 1" = 1, "Week 2" = 2,
+                                            "Week 3" = 3, "Week 4" = 4,
+                                            "Playoffs"),
+                             selected = list(1,2,3,4,"Playoffs")),
           checkboxGroupInput("modeFilterTeam", "Modes",
                              choices = list("Control", "Flashpoint", "Push",
                                             "Escort", "Hybrid"),
@@ -128,8 +133,13 @@ ui <- page_fluid(
                         min = 1, max = 20, value = 10),
             plotOutput("teamPickratesVis")
           )
+        ),
+        card(
+          card_header("Filtered Matches"),
+          card_body(
+            dataTableOutput("filteredMatchesTeams")
+          )
         )
-
       )
     ),
     
@@ -140,19 +150,18 @@ ui <- page_fluid(
       "Map Analysis",
       layout_sidebar(
         sidebar = sidebar(
-          helpText("Select criteria to filter composition data."),
+          checkboxGroupInput("regionFilterMaps", "Region",
+                             choices = list("NA" = "north_america", "EMEA" = "emea", "Korea" = "korea"),
+                             selected = list("north_america", "emea", "korea")),
+          selectInput("mapFilterMaps", "Maps",
+                      choices = map_list),
+          selectInput("teamFilterMaps", "Team",
+                      choices = c("All" = "All", team_list)),
           checkboxGroupInput("weekFilterMaps", "Week",
                              choices = list("Week 1" = 1, "Week 2" = 2,
                                             "Week 3" = 3, "Week 4" = 4,
                                             "Playoffs"),
                              selected = list(1,2,3,4,"Playoffs")),
-          checkboxGroupInput("regionFilterMaps", "Region",
-                             choices = list("NA" = "north_america", "EMEA" = "emea", "Korea" = "korea"),
-                             selected = list("north_america", "emea", "korea")),
-          selectInput("mapFilterMaps", "Maps",
-                             choices = map_list),
-          selectInput("teamFilterMaps", "Team",
-                      choices = c("All" = "All", team_list)),
           checkboxGroupInput("roleFilterMaps", "Roles",
                              choices = list("Tank" = "tank", "Support" = "sup", "DPS" = "dps"),
                              selected = list("tank", "sup", "dps"))
@@ -172,6 +181,12 @@ ui <- page_fluid(
           plotOutput(
             "mapPickratesVis"
           )
+        ),
+        card(
+          card_header("Filtered Matches"),
+          card_body(
+            dataTableOutput("filteredMatchesMaps")
+          )
         )
       )
     ),
@@ -181,13 +196,6 @@ ui <- page_fluid(
       "Composition Analysis",
       layout_sidebar(
         sidebar = sidebar(
-          helpText("Select criteria to filter composition data."),
-          checkboxGroupInput("weekFilterComp", "Week",
-                             choices = list("Week 1" = 1, "Week 2" = 2,
-                                            "Week 3" = 3, "Week 4" = 4,
-                                            "Playoffs"),
-                             selected = list(1,2,3,4,"Playoffs")),
-          
           checkboxGroupInput("regionFilterComp", "Region",
                              choices = list("NA" = "north_america", "EMEA" = "emea", "Korea" = "korea"),
                              selected = list("north_america", "emea", "korea")),
@@ -195,6 +203,11 @@ ui <- page_fluid(
                       choices = c("All" = "All", team_list)),
           selectInput("mapFilterComp", "Map(s)",
                       choices = c("All" = "All", map_list)),
+          checkboxGroupInput("weekFilterComp", "Week",
+                             choices = list("Week 1" = 1, "Week 2" = 2,
+                                            "Week 3" = 3, "Week 4" = 4,
+                                            "Playoffs"),
+                             selected = list(1,2,3,4,"Playoffs")),
           checkboxGroupInput("modeFilterComp", "Mode",
                       choices = list("Control", "Flashpoint", "Push",
                                      "Escort", "Hybrid"),
@@ -212,6 +225,12 @@ ui <- page_fluid(
             dataTableOutput("compositions")
             
           )
+        ),
+        card(
+          card_header("Filtered Matches"),
+          card_body(
+            dataTableOutput("filteredMatchesComp")
+          )
         )
     )
   ),
@@ -219,12 +238,6 @@ ui <- page_fluid(
     "Ban analysis",
     layout_sidebar(
       sidebar = sidebar(
-        helpText("Select criteria to filter composition data."),
-        checkboxGroupInput("weekFilterBan", "Week",
-                           choices = list("Week 1" = 1, "Week 2" = 2,
-                                          "Week 3" = 3, "Week 4" = 4,
-                                          "Playoffs"),
-                           selected = list(1,2,3,4,"Playoffs")),
         
         checkboxGroupInput("regionFilterBan", "Region",
                            choices = list("NA" = "north_america", "EMEA" = "emea", "Korea" = "korea"),
@@ -232,7 +245,12 @@ ui <- page_fluid(
         selectInput("teamFilterBan", "Team",
                     choices = c("All" = "All", team_list)),
         selectInput("mapFilterBan", "Map(s)",
-                    choices = c("All" = "All", map_list))
+                    choices = c("All" = "All", map_list)),
+        checkboxGroupInput("weekFilterBan", "Week",
+                           choices = list("Week 1" = 1, "Week 2" = 2,
+                                          "Week 3" = 3, "Week 4" = 4,
+                                          "Playoffs"),
+                           selected = list(1,2,3,4,"Playoffs"))
       ),
       card(
         card_title("Banrates per hero"),
@@ -247,9 +265,19 @@ ui <- page_fluid(
                       min = 1, max = 20, value = 10),
           plotOutput("banratesVis")
         )
+      ),
+      card(
+        card_header("Filtered Matches"),
+        card_body(
+          dataTableOutput("applicableResultsBans")
+        )
       )
     )
-  )
+  ),
+nav_item(
+  input_dark_mode(id = "dark_mode", mode = "dark")
+)
+
 )
 )
   
@@ -270,7 +298,7 @@ server <- function(input, output) {
     
     # Try to source the update script
     tryCatch({
-      source("./R/update.R", local = TRUE)
+      source("./scripts/update.R", local = TRUE)
       
       # If successful, reload the data in the current session
       all_data <- hero_composition |> 
@@ -292,6 +320,7 @@ server <- function(input, output) {
     })
   })
   
+
 # Overview page----------
   
   #Filter logic ----------
@@ -303,6 +332,17 @@ server <- function(input, output) {
              region %in% input$regionFilterGen) |> 
       select(round_id, match_map_id, match_id, hero_name,
              role, map_name, mode, team_name, team, iswin) 
+  })
+  
+  filtered_matches_general <- reactive({
+    matches |> 
+      left_join(teams, by = c("team1_id" = "team_id")) |> 
+      rename(team_1 = team_name) |> 
+      left_join(teams, by = c("team2_id" = "team_id")) |> 
+      rename(team_2 = team_name) |> 
+      rename(region = region.x) |> 
+      filter(week %in% input$weekFilterGen, 
+             region %in% input$regionFilterGen)
   })
   
   #Calculations ----------
@@ -346,16 +386,35 @@ server <- function(input, output) {
       coord_flip() 
   })
   
-  
+  output$filteredMatchesGen <- renderDT({
+    filtered_matches_general() |> 
+    select(team_1, team_2, date, bracket) |> 
+      datatable(
+        colnames = c("Team 1", "Team 2", "Date", "Bracket"),
+      )
+  })
   
   # Team page ---------
   # Filter logic ----------
-    filtered_data_by_team_filters <- reactive({
-    all_data |>
-      filter(week %in% input$weekFilterTeam,
-             mode %in% input$modeFilterTeam,
-             role %in% input$roleFilterTeam,
-             region %in% input$regionFilterTeam)
+  filtered_data_by_team_filters <- reactive({
+  all_data |>
+    filter(week %in% input$weekFilterTeam,
+           mode %in% input$modeFilterTeam,
+           role %in% input$roleFilterTeam,
+           region %in% input$regionFilterTeam)
+  })
+  
+  filtered_matches_team <- reactive({
+    matches |> 
+      left_join(teams, by = c("team1_id" = "team_id")) |> 
+      rename(team_1 = team_name) |> 
+      left_join(teams, by = c("team2_id" = "team_id")) |> 
+      rename(team_2 = team_name) |> 
+      rename(region = region.x) |> 
+      filter(week %in% input$weekFilterTeam, 
+             region %in% input$regionFilterTeam,
+             ((team_1 == input$teamFilterTeam) | (team_2 == input$teamFilterTeam))
+             )
   })
   # Calculations ----------
   maps_by_team <- reactive({
@@ -445,6 +504,14 @@ server <- function(input, output) {
       coord_flip()
   })
   
+  output$filteredMatchesTeams <- renderDT({
+    filtered_matches_team() |> 
+      select(team_1, team_2, date, bracket) |> 
+      datatable(
+        colnames = c("Team 1", "Team 2", "Date", "Bracket"),
+      )
+  })
+  
   # Map page ----------
   
   # Filter logic ----------
@@ -461,6 +528,40 @@ server <- function(input, output) {
   
     
     return(filtered_data)
+  })
+  
+  filtered_matches_maps <- reactive({
+    filtered_matches <- matches |> 
+      left_join(teams, by = c("team1_id" = "team_id")) |> 
+      rename(team_1 = team_name) |> 
+      left_join(teams, by = c("team2_id" = "team_id")) |> 
+      rename(team_2 = team_name) |> 
+      rename(region = region.x) |> 
+      filter(week %in% input$weekFilterMaps, 
+             region %in% input$regionFilterMaps)
+    
+    if(input$teamFilterMaps != "All"){
+      filtered_matches <- filtered_matches |> 
+        filter(
+          ((team_1 == input$teamFilterMaps) | (team_2 == input$teamFilterMaps))
+        )
+    }
+    
+    selected_map_id <- maps |> 
+      filter(map_name == input$mapFilterMaps) |> 
+      pull(map_id)
+    
+    
+    filtered_match_ids <- filtered_matches |> 
+      right_join(match_maps, by = "match_id") |> 
+      filter(map_id == selected_map_id) |> 
+      select(match_id) |> 
+      distinct()
+    
+    filtered_matches <- filtered_matches |> 
+      filter(match_id %in% filtered_match_ids$match_id)
+    
+    return(filtered_matches)
   })
   
   # Calculations -----------
@@ -496,50 +597,46 @@ server <- function(input, output) {
     )
   })
   
-  total_n_maps <- reactive({
-    filtered_data_by_maps() |> 
-      group_by(map_name) |> 
-      summarize(n_played = n_distinct(match_map_id)) |> 
-      ungroup()
-    
+  total_n_played <- reactive({
+    filtered_data_by_maps() |>
+      group_by(map_name) |>
+      summarise(n_played = n_distinct(match_map_id)) 
   })
   
-  map_pickrates <- reactive({
+  total_pickrates_for_maps <- reactive({
     filtered_data_by_maps() |> 
-    distinct(map_name, hero_name, role, match_map_id, .keep_all = TRUE) |> 
-    group_by(map_name, hero_name, role) |> 
-      summarise(
-        appearances = n(),
-        won_maps = sum(iswin)
-      ) |> 
-      left_join(total_n_maps(), by = "map_name") |> 
-      mutate(pickrate = appearances/n_played,
-             winrate = won_maps/appearances) |> 
-      ungroup() |> 
-      select(hero_name, map_name, role, appearances, pickrate, winrate) |> 
+      group_by(map_name, hero_name, role) |> 
+      summarize(all_appearances= n(),
+                hero_played = n_distinct(match_map_id),
+                hero_wins = sum(iswin),
+                .groups = "drop") |> 
+      left_join(total_n_played(), by = "map_name") |>
+      mutate(pickrate = hero_played / n_played,
+             winrate = hero_wins / all_appearances) |> 
       arrange(desc(pickrate))
   })
   
   # Outputs -----------
   
   output$mapPickrates <- renderDT({
-    map_pickrates() |> 
+    total_pickrates_for_maps() |> 
       filter(map_name == input$mapFilterMaps) |> 
-      select(-role, -map_name) |> 
+      select(hero_name, hero_played, pickrate, winrate) |> 
       datatable(
         colnames = c("Hero", "Appearances on map",
-                     "Pickrate"),
+                     "Pickrate", "Winrate"),
         filter = "top",
         options = list(
           searching = TRUE, 
           pageLength = 10,
           autoWidth = TRUE
         )) |>
-        formatPercentage("pickrate", digits = 1)
+        formatPercentage("pickrate", digits = 1) |> 
+        formatPercentage("winrate", digits = 1)
       })
   
   output$mapPickratesVis <- renderPlot({
-    map_pickrates() |> 
+    total_pickrates_for_maps() |> 
       filter(map_name == input$mapFilterMaps) |> 
       mutate(pickrate = pickrate) |> 
       head(input$topnmapPickrates) |> 
@@ -549,6 +646,13 @@ server <- function(input, output) {
       coord_flip() 
   })
   
+  output$filteredMatchesMaps <- renderDT({
+    filtered_matches_maps() |> 
+      select(team_1, team_2, date, bracket) |> 
+      datatable(
+        colnames = c("Team 1", "Team 2", "Date", "Bracket"),
+      )
+  })
 
   # Composition page ----------
   
@@ -572,6 +676,49 @@ server <- function(input, output) {
     
     return(filtered_data)
   })
+  
+  filtered_matches_comp <- reactive({
+    filtered_matches <- matches |> 
+      left_join(teams, by = c("team1_id" = "team_id")) |> 
+      rename(team_1 = team_name) |> 
+      left_join(teams, by = c("team2_id" = "team_id")) |> 
+      rename(team_2 = team_name) |> 
+      rename(region = region.x) |> 
+      filter(week %in% input$weekFilterComp, 
+             region %in% input$regionFilterComp)
+    
+    if(input$teamFilterComp != "All"){
+      filtered_matches <- filtered_matches |> 
+        filter(
+          ((team_1 == input$teamFilterComp) | (team_2 == input$teamFilterComp))
+        )
+    }
+    
+    if(input$mapFilterComp != "All"){
+      selected_map_id <- maps |> 
+        filter(input$mapFilterComp == map_name) |> 
+        pull(map_id)
+    }
+    
+    filtered_match_ids <- filtered_matches |> 
+      right_join(match_maps, by = "match_id") 
+
+    if(input$mapFilterComp != "All"){
+      filtered_match_ids <- filtered_matches |> 
+        filter(map_id == selected_map_id$map_id)
+    }
+    
+    filtered_match_ids <- filtered_match_ids |> 
+      select(match_id) |> 
+      distinct()
+    
+    
+    filtered_matches <- filtered_matches |> 
+      filter(match_id %in% filtered_match_ids$match_id)
+    
+    return(filtered_matches)
+  })
+  
   
   #Calculations ----------
   
@@ -630,6 +777,15 @@ server <- function(input, output) {
                 autoWidth = TRUE
               )) 
   )
+  
+  output$filteredMatchesComp <- renderDT({
+    filtered_matches_comp() |> 
+      select(team_1, team_2, date, bracket) |> 
+      datatable(
+        colnames = c("Team 1", "Team 2", "Date", "Bracket"),
+      )
+  })
+  
   
   #Ban page ---------
   
