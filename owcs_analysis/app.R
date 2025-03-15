@@ -807,6 +807,7 @@ server <- function(input, output) {
     return(filtered_data)
   })
   
+  
   # update available teams by region
   
   teams_in_region <- reactive({
