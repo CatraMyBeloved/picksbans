@@ -1,4 +1,4 @@
-server_ban <- function(id, all_data){
+ban_server <- function(id, all_bans){
   moduleServer(id, function(input, output, session){
     
     filtered_ban_data <- reactive({

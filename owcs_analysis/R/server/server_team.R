@@ -22,7 +22,7 @@ team_server <- function(id, all_data){
     })
     
     filtered_matches <- reactive({
-      filtered_data |> 
+      filtered_matches_all_teams() |> 
         filter(
           ((team_1 == input$teamFilter) | (team_2 == input$teamFilter))
         )
@@ -34,7 +34,7 @@ team_server <- function(id, all_data){
         group_by(hero_name, role) |> 
         summarise(
           appearances = n(),
-          pickrate = appearances/total_maps(),
+          pickrate = appearances/total_maps,
           winrate = mean(iswin)
         ) |>
         filter(appearances > 0) |> 
@@ -118,7 +118,7 @@ team_server <- function(id, all_data){
     })
     
     output$PickratesVis <- renderPlot({
-      pickrate_comparison_team() |>
+      pickrate_comparison() |>
         head(input$topnPickrates) |>
         mutate(pickrate_diff = pickrate_diff * 100) |>
         ggplot(aes(x = reorder(hero_name, abs(pickrate_diff)), y = pickrate_diff, fill = pickrate_diff > 0)) +
