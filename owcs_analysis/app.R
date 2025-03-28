@@ -6,8 +6,7 @@
 #
 # https://shiny.posit.co/
 # 
-# TODO: Update filtered matches to reflect modes
-# TODO: add filtered matches to composition and ban pages
+
 library(shiny)
 library(bslib)
 library(tidyverse)
@@ -234,6 +233,7 @@ ui <- page_fluid(
         )
     )
   ),
+# Ban panel -----
   nav_panel(
     "Ban analysis",
     layout_sidebar(
@@ -269,7 +269,7 @@ ui <- page_fluid(
       card(
         card_header("Filtered Matches"),
         card_body(
-          dataTableOutput("applicableResultsBans")
+          dataTableOutput("filteredMatchesBan")
         )
       )
     )
@@ -807,7 +807,48 @@ server <- function(input, output) {
     return(filtered_data)
   })
   
-  
+  filtered_matches_bans <- reactive({
+    filtered_matches <- matches |> 
+      left_join(teams, by = c("team1_id" = "team_id")) |> 
+      rename(team_1 = team_name) |> 
+      left_join(teams, by = c("team2_id" = "team_id")) |> 
+      rename(team_2 = team_name) |> 
+      rename(region = region.x) |> 
+      filter(week %in% input$weekFilterBan, 
+             region %in% input$regionFilterBan)
+    
+    if(input$teamFilterBan != "All"){
+      filtered_matches <- filtered_matches |> 
+        filter(
+          ((team_1 == input$teamFilterBan) | (team_2 == input$teamFilterBan))
+        )
+    }
+    
+    if(input$mapFilterBan != "All"){
+      selected_map_id <- maps |> 
+        filter(input$mapFilterBan == map_name) |> 
+        pull(map_id)
+    }
+    
+    filtered_match_ids <- filtered_matches |> 
+      right_join(match_maps, by = "match_id") 
+    
+    if(input$mapFilterBan != "All"){
+      filtered_match_ids <- filtered_matches |> 
+        filter(map_id == selected_map_id)
+    }
+    
+    filtered_match_ids <- filtered_match_ids |> 
+      select(match_id) |> 
+      distinct()
+    
+    
+    filtered_matches <- filtered_matches |> 
+      filter(match_id %in% filtered_match_ids$match_id)
+    
+    return(filtered_matches)
+    
+  })
   # update available teams by region
   
   teams_in_region <- reactive({
@@ -912,6 +953,13 @@ server <- function(input, output) {
       guides(fill = guide_legend(reverse = TRUE))
   })
   
+  output$filteredMatchesBan <- renderDT({
+    filtered_matches_bans() |> 
+      select(team_1, team_2, date, bracket) |> 
+      datatable(
+        colnames = c("Team 1", "Team 2", "Date", "Bracket"),
+      )
+  })
 }
   
   
