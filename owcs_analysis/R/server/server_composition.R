@@ -47,7 +47,7 @@ server_composition <- function(id, all_data){
         right_join(match_maps, by = "match_id") 
       
       if(input$mapFilter != "All"){
-        filtered_match_ids <- filtered_matches |> 
+        filtered_match_ids <- filtered_match_ids |> 
           filter(map_id == selected_map_id)
       }
       

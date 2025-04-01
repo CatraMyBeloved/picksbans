@@ -32,12 +32,12 @@ combined_data <- bind_rows(cleaned_data)
 
 message("Processing into tables...")
 
-teams <- combined_data |> select(t1_team, t2_team, region) |> 
+new_teams <- combined_data |> select(t1_team, t2_team, region) |> 
   pivot_longer(cols = c(t1_team, t2_team), values_to = "team_name") |> 
   distinct(team_name, region) |> 
   mutate(team_id = row_number())
 
-maps <- combined_data |> select(map) |> distinct(map) |> 
+new_maps <- combined_data |> select(map) |> distinct(map) |> 
   mutate(map_id = row_number()) |> mutate(map_name = map, map = NULL,
                                           mode = case_when(
                                             map_name %in% c("Lijiang Tower", "Antarctic Peninsula", "Oasis", "Nepal", "Samoa") ~ "Control",
@@ -48,7 +48,7 @@ maps <- combined_data |> select(map) |> distinct(map) |>
                                           )
   )
 
-heroes <- combined_data |>  select(
+new_heroes <- combined_data |>  select(
   t1_tank, t1_dps1, t1_dps2, t1_sup1,
   t1_sup2, t2_tank, t2_dps1, t2_dps2,
   t2_sup1, t2_sup2) |>
@@ -58,7 +58,7 @@ heroes <- combined_data |>  select(
   distinct(hero_name, role) |> 
   mutate(hero_id = row_number())
 
-matches <- combined_data |>
+new_matches <- combined_data |>
   select(date, patch_date, bracket, week, t1_team, t2_team) |>
   distinct() |> 
   mutate(match_id = row_number()) |> 
@@ -72,7 +72,7 @@ matches <- combined_data |>
   )) |> 
   select(match_id, team1_id, team2_id, everything(), -t1_team, -t2_team, -region.x, -region.y)
 
-match_maps <- combined_data |>
+new_match_maps <- combined_data |>
   select(date, t1_team, t2_team, map, t1_result, t2_result) |>
   group_by(date, t1_team, t2_team, map) |> 
   mutate(map_winner= case_when(
@@ -94,7 +94,7 @@ match_maps <- combined_data |>
   left_join(maps, c("map" = "map_name")) |> 
   select(-map,-mode, -date, -t1_id, -t2_id)
 
-rounds <- combined_data |>
+new_rounds <- combined_data |>
   select(date, t1_round, t1_team, t2_team, map, t1_result, t2_result) |> 
   left_join(maps, c("map" = "map_name")) |> 
   left_join(teams, c("t1_team" = "team_name")) |> 
@@ -130,7 +130,7 @@ rounds <- combined_data |>
   ungroup()  |> 
   select(-map_win_team_id, -mode)
 
-hero_composition <- combined_data |> select(-vod_link, -patch_date, -bracket, -week, -t1_result, -t2_result, -vs, -t2_round, -first_ban_team, -first_ban_hero, -second_ban_team,-second_ban_hero,-region) |> 
+new_hero_composition <- combined_data |> select(-vod_link, -patch_date, -bracket, -week, -t1_result, -t2_result, -vs, -t2_round, -first_ban_team, -first_ban_hero, -second_ban_team,-second_ban_hero,-region) |> 
   left_join(teams, c("t1_team" = "team_name")) |> 
   rename(t1_id = team_id) |> 
   left_join(teams, c("t2_team" = "team_name")) |> 
@@ -151,7 +151,7 @@ hero_composition <- combined_data |> select(-vod_link, -patch_date, -bracket, -w
   mutate(hero_comp_id = row_number()) |> 
   select(hero_comp_id, round_id, hero_id, team)
 
-bans <- combined_data |>
+new_bans <- combined_data |>
   select(date, t1_team, t2_team, map, first_ban_team, first_ban_hero, second_ban_team, second_ban_hero) |> 
   left_join(teams, by = c("t1_team" = "team_name")) |> 
   rename(team1_id = team_id) |> 
@@ -174,11 +174,4 @@ bans <- combined_data |>
   left_join(heroes, by = c("hero" = "hero_name")) |> 
   select(match_map_id, team_id, first_bool, hero_id)
 
-message("Tables created. Saving to file...")
-
-save(teams, maps, heroes, matches, match_maps, rounds, hero_composition, bans, 
-     file = "./data/esports_data.RData")
-
-message("Tables saved to file. Removing unused variables...")
-#rm(data, cleaned_data, combined_data)
-message("Preparations completed!")
+message("Tables created.")

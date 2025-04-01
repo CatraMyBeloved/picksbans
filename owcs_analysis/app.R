@@ -5,9 +5,12 @@ library(shiny)
 library(bslib)
 library(tidyverse)
 library(DT)
+library(rdrop2)
 
 # Source helper functions
-source("R/prepare.R")  # This will load your data and create necessary lists
+source("R/dropbox_helpers.R")
+source("R/prepare.R")  
+
 
 # Load all UI and server modules
 source_files <- function(dir) {
@@ -72,6 +75,7 @@ ui <- page_fluid(
 server <- function(input, output, session) {
   # Update data logic
   observeEvent(input$updateDataBtn, {
+    # Show a progress modal
     showModal(modalDialog(
       title = "Updating Data",
       "Please wait while the data is being updated...",
@@ -79,27 +83,41 @@ server <- function(input, output, session) {
       easyClose = FALSE
     ))
     
+    download_success <- download_data()
+    if (!download_success) {
+      removeModal()
+      showNotification("Failed to download current data", type = "error")
+      return()
+    }
+    
+    # Update the data
     tryCatch({
       source("./scripts/update.R", local = TRUE)
       
-      # Reload the data
-      source("R/prepare.R", local = TRUE)
+      # Upload the updated data
+      if(matches == new_matches){
+        removeModal()
+        showNotification("No new data available!", type = "message")
+      } else {
+        hero_composition <- new_hero_composition
+        heroes <- new_heroes
+        maps <- new_maps
+        match_maps <- new_match_maps
+        matches <- new_matches
+        rounds <- new_rounds
+        teams <- new_teams
+        bans <- new_bans
+      }
       
-      # Update the joined data
-      all_data <- hero_composition |> 
-        left_join(heroes, by = "hero_id") |> 
-        left_join(rounds, by = "round_id") |> 
-        left_join(match_maps, by = "match_map_id") |> 
-        left_join(matches, by = "match_id") |> 
-        left_join(teams, by = c("team" = "team_id")) |> 
-        left_join(maps, by = "map_id")
-      
-      # Close the modal and show success message
-      removeModal()
-      showNotification("Data successfully updated!", type = "message")
-    }, 
-    error = function(e) {
-      # If there's an error, show the error message
+      upload_success <- upload_data()
+      if (upload_success) {
+        removeModal()
+        showNotification("Data successfully updated!", type = "message")
+      } else {
+        removeModal()
+        showNotification("Failed to upload updated data", type = "error")
+      }
+    }, error = function(e) {
       removeModal()
       showNotification(paste("Error updating data:", e$message), type = "error")
     })
