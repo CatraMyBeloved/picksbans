@@ -7,10 +7,6 @@ library(tidyverse)
 library(DT)
 library(rdrop2)
 
-# Source helper functions
-source("R/dropbox_helpers.R")
-source("R/prepare.R")  
-
 
 # Load all UI and server modules
 source_files <- function(dir) {
@@ -95,9 +91,10 @@ server <- function(input, output, session) {
       source("./scripts/update.R", local = TRUE)
       
       # Upload the updated data
-      if(matches == new_matches){
+      if(identical(matches, new_matches)){
         removeModal()
         showNotification("No new data available!", type = "message")
+        return()
       } else {
         hero_composition <- new_hero_composition
         heroes <- new_heroes
