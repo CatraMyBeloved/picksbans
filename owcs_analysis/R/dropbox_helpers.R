@@ -1,7 +1,11 @@
+# dropbox_helpers
+# This file contains functions to interact with the dropbox storage, in order to create persisten data storage.
+#
 library(rdrop2)
 
 # Download data from Dropbox INTO ENVIRONMENT
 download_data <- function(file_path = "/owcs_analysis_shinyapp/esports_data.Rdata") {
+  # Create temp_file to download data into
   temp_file <- tempfile(fileext = ".RData")
   tryCatch({
     # Download file from Dropbox
@@ -21,7 +25,7 @@ download_data <- function(file_path = "/owcs_analysis_shinyapp/esports_data.Rdat
 # Upload data to Dropbox FROM ENVIRONMENT
 upload_data <- function(dropbox_path = "/owcs_analysis_shinyapp/", file_path = "./data/esports_data.Rdata") {
   tryCatch({
-    # Save current data objects to data file
+    # Save current data objects to local data file
     save(teams, maps, heroes, matches, match_maps, rounds, hero_composition, bans, 
          file = "./data/esports_data.Rdata")
     
